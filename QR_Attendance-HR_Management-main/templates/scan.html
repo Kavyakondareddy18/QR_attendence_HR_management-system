@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QR Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-custom mb-4">
+    <div class="container">
+      <a class="navbar-brand" href="/">Petrol Pump QR Attendance</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
+          <li class="nav-item"><a class="nav-link" href="/scan">Scan</a></li>
+          {% if session.get('admin') %}
+            <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
+            <li class="nav-item"><a class="nav-link" href="/report">Report</a></li>
+            <li class="nav-item"><a class="nav-link" href="/logout">Logout ({{ session['admin'] }})</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link" href="/login">Admin Login</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <div id="alertBox" style="display:none;" class="alert alert-success text-center w-50 mx-auto mt-3" role="alert"></div>
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-8 col-lg-5 custom-card text-center">
+        <h2 class="page-title">Scan your QR Code</h2>
+        <div id="reader" style="max-width:100%; margin:auto;"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    function showAlert(message, type="success") {
+      const alertBox = document.getElementById("alertBox");
+      alertBox.className = `alert alert-${type} text-center w-50 mx-auto mt-3`;
+      alertBox.innerText = message;
+      alertBox.style.display = "block";
+      setTimeout(() => alertBox.style.display = "none", 2500);
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      fetch('/mark_attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qr_data: decodedText })
+      }).then(response => response.text())
+        .then(data => { showAlert(data, "success"); });
+    }
+    new Html5QrcodeScanner('reader', { fps: 10, qrbox: 250 }).render(onScanSuccess);
+  </script>
+</body>
+</html>

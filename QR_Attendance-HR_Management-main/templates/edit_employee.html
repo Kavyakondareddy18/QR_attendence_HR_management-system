@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Employee</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-custom mb-4">
+    <div class="container">
+      <a class="navbar-brand" href="/">Petrol Pump QR Attendance</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
+          <li class="nav-item"><a class="nav-link" href="/scan">Scan</a></li>
+          {% if session.get('admin') %}
+            <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
+            <li class="nav-item"><a class="nav-link" href="/report">Report</a></li>
+            <li class="nav-item"><a class="nav-link" href="/update_password">Update Password</a></li>
+            <li class="nav-item"><a class="nav-link" href="/logout">Logout ({{ session['admin'] }})</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link" href="/login">Admin Login</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} text-center w-50 mx-auto">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  <div class="container py-5">
+    <div class="col-12 col-md-8 col-lg-5 custom-card mx-auto">
+      <h2 class="page-title text-center">Edit Employee</h2>
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Name:</label>
+          <input type="text" name="name" class="form-control" value="{{ employee.name }}" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Daily Salary (₹):</label>
+          <input type="number" step="0.01" name="daily_salary" class="form-control" value="{{ employee.daily_salary }}" required>
+        </div>
+        <button type="submit" class="btn btn-custom w-100">Update</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

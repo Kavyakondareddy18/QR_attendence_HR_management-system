@@ -1,28 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>QR Scanner</title>
+  <meta charset="UTF-8">
+  <title>QR Scanner - QR Attendance System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Load Bootstrap first -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Custom glassmorphic CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- HTML5 QR Code library -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
   <nav class="navbar navbar-expand-lg navbar-custom mb-4">
     <div class="container">
-      <a class="navbar-brand" href="/">Petrol Pump QR Attendance</a>
+      <a class="navbar-brand" href="/">QR Attendance System</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
-          <li class="nav-item"><a class="nav-link" href="/scan">Scan</a></li>
+          <li class="nav-item"><a class="nav-link active" href="/scan">Scan Attendance</a></li>
           {% if session.get('admin') %}
-            <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
-            <li class="nav-item"><a class="nav-link" href="/report">Report</a></li>
-            <li class="nav-item"><a class="nav-link" href="/logout">Logout ({{ session['admin'] }})</a></li>
+            <li class="nav-item"><a class="nav-link" href="/admin">Dashboard</a></li>
+            <li class="nav-item"><a class="nav-link" href="/report">Reports</a></li>
+            <li class="nav-item"><a class="nav-link text-warning" href="/logout">Logout</a></li>
           {% else %}
             <li class="nav-item"><a class="nav-link" href="/login">Admin Login</a></li>
           {% endif %}
@@ -30,33 +33,231 @@
       </div>
     </div>
   </nav>
-  <div id="alertBox" style="display:none;" class="alert alert-success text-center w-50 mx-auto mt-3" role="alert"></div>
-  <div class="container mt-5">
+
+  <!-- Notification Toast style Alert -->
+  <div id="toastAlert" style="display:none; position: fixed; top: 20px; right: 20px; z-index: 1050; max-width: 350px;" class="toast-custom p-3 rounded shadow" role="alert">
+    <div class="d-flex align-items-center gap-2">
+      <strong id="toastTitle" class="me-auto">Notification</strong>
+      <button type="button" class="btn-close btn-close-white ms-auto" onclick="hideToast()"></button>
+    </div>
+    <div id="toastBody" class="mt-2 text-white-50 small"></div>
+  </div>
+
+  <div class="container mt-5 mb-5 fade-in-up">
     <div class="row justify-content-center">
-      <div class="col-12 col-md-8 col-lg-5 custom-card text-center">
-        <h2 class="page-title">Scan your QR Code</h2>
-        <div id="reader" style="max-width:100%; margin:auto;"></div>
+      <div class="col-12 col-md-10 col-lg-6">
+        <div class="glass-card text-center">
+          <h2 class="page-title">Attendance Terminal</h2>
+          <p class="text-muted mb-4">Position your attendance QR code inside the viewfinder window</p>
+          
+          <!-- Viewfinder Frame with Sweeping Laser Line -->
+          <div class="scanner-viewfinder">
+            <div id="reader" style="width: 100%; height: 100%; border: none !important;"></div>
+          </div>
+          
+          <!-- Dynamic Result Display Panel -->
+          <div id="resultPanel" class="mt-4 p-3 d-none rounded-3 text-start animate-fade-in-up" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05);">
+            <div class="d-flex align-items-center gap-3">
+              <div id="resultIcon" class="fs-1 text-success">✓</div>
+              <div>
+                <h4 id="resultName" class="mb-1 text-white">Name</h4>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span id="resultRole" class="badge">ROLE</span>
+                  <span id="resultCode" class="text-muted small">Code</span>
+                </div>
+                <p id="resultMsg" class="mb-0 text-white-50 small">Attendance check success message</p>
+                <p id="resultTime" class="mb-0 text-accent small mt-1 font-monospace">10:00 AM</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Manual Code Fallback -->
+          <div class="mt-4">
+            <p class="text-muted small mb-2">— OR —</p>
+            <button class="btn btn-outline-glass btn-sm w-100" type="button" data-bs-toggle="collapse" data-bs-target="#manualEntryCollapse" aria-expanded="false" aria-controls="manualEntryCollapse">
+              Enter Code Manually
+            </button>
+            <div class="collapse mt-3" id="manualEntryCollapse">
+              <form id="manualForm" class="d-flex gap-2">
+                <input type="text" id="manualCode" class="form-control form-control-sm" placeholder="Enter Student Roll No / Employee Code" required>
+                <button type="submit" class="btn btn-accent btn-sm">Submit</button>
+              </form>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- Audio Beep Object (using dynamic synthesised Audio API to avoid local asset dependencies!) -->
   <script>
-    function showAlert(message, type="success") {
-      const alertBox = document.getElementById("alertBox");
-      alertBox.className = `alert alert-${type} text-center w-50 mx-auto mt-3`;
-      alertBox.innerText = message;
-      alertBox.style.display = "block";
-      setTimeout(() => alertBox.style.display = "none", 2500);
+    function playScanBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+        gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.15); // play for 150ms
+      } catch (e) {
+        console.warn('Audio Context not supported or allowed yet.', e);
+      }
     }
 
-    function onScanSuccess(decodedText, decodedResult) {
+    function playErrorBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(220, audioCtx.currentTime); // Low buzz note
+        gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.3); // play for 300ms
+      } catch (e) {
+        console.warn('Audio Context not supported or allowed yet.', e);
+      }
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let isScanning = true;
+    const toastAlert = document.getElementById("toastAlert");
+    const toastTitle = document.getElementById("toastTitle");
+    const toastBody = document.getElementById("toastBody");
+    
+    const resultPanel = document.getElementById("resultPanel");
+    const resultIcon = document.getElementById("resultIcon");
+    const resultName = document.getElementById("resultName");
+    const resultRole = document.getElementById("resultRole");
+    const resultCode = document.getElementById("resultCode");
+    const resultMsg = document.getElementById("resultMsg");
+    const resultTime = document.getElementById("resultTime");
+
+    function showToast(message, type="success") {
+      toastAlert.style.display = "block";
+      toastAlert.className = `p-3 rounded shadow toast-custom toast-${type}`;
+      toastTitle.innerText = type === "success" ? "✓ Success" : type === "warning" ? "⚠ Warning" : "✗ Error";
+      toastBody.innerText = message;
+      
+      // Auto hide toast after 3.5s
+      setTimeout(hideToast, 3500);
+    }
+
+    function hideToast() {
+      toastAlert.style.display = "none";
+    }
+
+    function showScanResult(message, type, details = null) {
+      if (type === 'success' || type === 'info') {
+        resultIcon.innerText = "✓";
+        resultIcon.className = "fs-1 text-success";
+        resultPanel.style.border = "1px solid rgba(0, 255, 135, 0.3)";
+      } else if (type === 'warning') {
+        resultIcon.innerText = "⚠";
+        resultIcon.className = "fs-1 text-warning";
+        resultPanel.style.border = "1px solid rgba(255, 183, 0, 0.3)";
+      } else {
+        resultIcon.innerText = "✗";
+        resultIcon.className = "fs-1 text-danger";
+        resultPanel.style.border = "1px solid rgba(255, 0, 127, 0.3)";
+      }
+
+      if (details) {
+        resultName.innerText = details.name;
+        resultCode.innerText = `Code/RollNo: ${details.code}`;
+        resultRole.innerText = details.role;
+        resultRole.className = details.role === "STUDENT" ? "badge badge-student" : "badge badge-employee";
+        resultMsg.innerText = details.message || message;
+        resultTime.innerText = details.time ? `Scanned At: ${details.time}` : "";
+        resultPanel.classList.remove("d-none");
+      } else {
+        resultName.innerText = "Unknown Code";
+        resultCode.innerText = "";
+        resultRole.innerText = "INVALID";
+        resultRole.className = "badge bg-danger";
+        resultMsg.innerText = message;
+        resultTime.innerText = "";
+        resultPanel.classList.remove("d-none");
+      }
+
+      showToast(message, type);
+    }
+
+    function processCode(codeString) {
       fetch('/mark_attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qr_data: decodedText })
-      }).then(response => response.text())
-        .then(data => { showAlert(data, "success"); });
+        body: JSON.stringify({ qr_data: codeString })
+      })
+      .then(response => {
+        return response.json().then(data => ({
+          status: response.status,
+          body: data
+        }));
+      })
+      .then(result => {
+        const data = result.body;
+        if (result.status === 200) {
+          playScanBeep();
+          if (data.status === 'success') {
+            showScanResult(data.message, 'success', data);
+          } else {
+            showScanResult(data.message, 'warning', data);
+          }
+        } else {
+          playErrorBeep();
+          showScanResult(data.message || 'Error processing request.', 'danger');
+        }
+        
+        // Cooldown period
+        setTimeout(() => {
+          isScanning = true;
+        }, 3000);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        playErrorBeep();
+        showScanResult('Network error. Check connection.', 'danger');
+        setTimeout(() => { isScanning = true; }, 3000);
+      });
     }
-    new Html5QrcodeScanner('reader', { fps: 10, qrbox: 250 }).render(onScanSuccess);
+
+    function onScanSuccess(decodedText, decodedResult) {
+      if (!isScanning) return;
+      isScanning = false;
+      processCode(decodedText);
+    }
+
+    // Initialize HTML5 QR Scanner
+    let html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", 
+      { 
+        fps: 10, 
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+      }, 
+      /* verbose= */ false
+    );
+    html5QrcodeScanner.render(onScanSuccess);
+
+    // Handle manual form submission
+    document.getElementById("manualForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const codeVal = document.getElementById("manualCode").value.trim();
+      if (codeVal) {
+        document.getElementById("manualCode").value = "";
+        bootstrap.Collapse.getInstance(document.getElementById("manualEntryCollapse")).hide();
+        processCode(codeVal);
+      }
+    });
   </script>
 </body>
 </html>

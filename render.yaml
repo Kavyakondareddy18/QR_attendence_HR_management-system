@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: qr-attendance-system
+    runtime: python
+    rootDir: QR_Attendance-HR_Management-main
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true

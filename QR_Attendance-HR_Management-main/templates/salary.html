@@ -1,45 +1,85 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Salary Report</title>
+  <meta charset="UTF-8">
+  <title>Salary Report - QR Attendance System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Load Bootstrap first -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Custom glassmorphic CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <nav class="navbar navbar-expand-lg navbar-custom mb-4">
     <div class="container">
-      <a class="navbar-brand" href="/">Petrol Pump QR Attendance</a>
+      <a class="navbar-brand" href="/">QR Attendance System</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
-          <li class="nav-item"><a class="nav-link" href="/scan">Scan</a></li>
-          {% if session.get('admin') %}
-            <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
-            <li class="nav-item"><a class="nav-link" href="/report">Report</a></li>
-            <li class="nav-item"><a class="nav-link" href="/logout">Logout ({{ session['admin'] }})</a></li>
-          {% else %}
-            <li class="nav-item"><a class="nav-link" href="/login">Admin Login</a></li>
-          {% endif %}
+          <li class="nav-item"><a class="nav-link" href="/scan">Scan Attendance</a></li>
+          <li class="nav-item"><a class="nav-link active" href="/admin">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="/report">Reports</a></li>
+          <li class="nav-item"><a class="nav-link text-warning" href="/logout">Logout</a></li>
         </ul>
       </div>
     </div>
   </nav>
-  <div class="container mt-5">
-    <div class="col-12 col-md-10 col-lg-8 custom-card mx-auto text-center">
-      <h2 class="page-title">Salary Report</h2>
-      <p><strong>Employee Name:</strong> {{ emp.name }}</p>
-      <p><strong>Employee Code:</strong> {{ emp.emp_code }}</p>
-      <p><strong>Month:</strong> {{ month }}</p>
-      <p><strong>Days Worked:</strong> {{ days_worked }}</p>
-      <p><strong>Daily Salary:</strong> ₹{{ emp.daily_salary }}</p>
-      <hr>
-      <h4>Total Salary: <span class="badge bg-success">₹{{ total_salary }}</span></h4>
+
+  <div class="container mt-5 mb-5 fade-in-up">
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-10 col-lg-7">
+        <div class="glass-card">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="page-title mb-0">Salary Report</h2>
+            <a href="/admin" class="btn btn-outline-glass btn-sm">← Back Dashboard</a>
+          </div>
+
+          <div class="p-4 rounded-4" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.03);">
+            <div class="row g-3">
+              <div class="col-12 col-sm-6">
+                <span class="text-muted small d-block">Employee Name</span>
+                <strong class="text-white fs-5">{{ emp.name }}</strong>
+              </div>
+              <div class="col-12 col-sm-6">
+                <span class="text-muted small d-block">Employee Code</span>
+                <strong class="text-white font-monospace fs-5">{{ emp.emp_code }}</strong>
+              </div>
+              <div class="col-12 col-sm-6">
+                <span class="text-muted small d-block">Department</span>
+                <strong class="text-white fs-5">{{ emp.department or 'N/A' }}</strong>
+              </div>
+              <div class="col-12 col-sm-6">
+                <span class="text-muted small d-block">Payroll Month</span>
+                <strong class="text-accent fs-5">{{ month }}</strong>
+              </div>
+            </div>
+
+            <hr class="my-4" style="border-top: 1px solid rgba(255,255,255,0.1);">
+
+            <div class="row g-3">
+              <div class="col-12 col-sm-6">
+                <span class="text-muted small d-block">Days Worked</span>
+                <strong class="text-white fs-4">{{ days_worked }} days</strong>
+              </div>
+              <div class="col-12 col-sm-6">
+                <span class="text-muted small d-block">Daily Rate (₹)</span>
+                <strong class="text-white fs-4">₹{{ emp.daily_salary }}</strong>
+              </div>
+            </div>
+
+            <div class="mt-4 p-3 rounded-3 text-center" style="background: rgba(138, 43, 226, 0.1); border: 1px solid rgba(138, 43, 226, 0.2);">
+              <span class="text-muted small d-block text-uppercase mb-1" style="letter-spacing: 1px;">Estimated Net Salary Payout</span>
+              <h3 class="mb-0 text-white font-monospace" style="font-weight: 700; color: var(--success) !important;">₹{{ total_salary }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
